@@ -988,7 +988,6 @@ let userProgress = {
   recentProblems: [], //here i have added a new property to store the user's recent problems
 
   favoriteProblems: [], //here i have added a new property to store the user's favorite problems
-  problemNotes: {},
   xp: 0,
   level: 1,
   streak: 0,
@@ -1051,34 +1050,6 @@ document.addEventListener("DOMContentLoaded", () => {
     topicModal.addEventListener("click", (e) => {
       if (e.target === topicModal) {
         closeTopicModal();
-      }
-    });
-  }
-
-  const saveNotesBtn = document.getElementById("saveNotesBtn");
-
-  if (saveNotesBtn) {
-    saveNotesBtn.addEventListener("click", saveProblemNotes);
-  }
-
-  const notesModalClose = document.getElementById("notesModalClose");
-
-  if (notesModalClose) {
-    notesModalClose.addEventListener("click", closeNotesModal);
-  }
-
-  const closeNotesBtn = document.getElementById("closeNotesBtn");
-
-  if (closeNotesBtn) {
-    closeNotesBtn.addEventListener("click", closeNotesModal);
-  }
-
-  const notesModal = document.getElementById("notesModal");
-
-  if (notesModal) {
-    notesModal.addEventListener("click", (e) => {
-      if (e.target === notesModal) {
-        closeNotesModal();
       }
     });
   }
@@ -1349,6 +1320,12 @@ document.addEventListener("click", (e) => {
 function getTopicProgress(topicName) {
   // Map topic names to category keys used in practiceProblems
   const categoryMap = {
+      "Arrays": "arrays",
+      "Strings": "strings",
+      "Linked List": "linkedlist",
+      "Trees": "trees",
+      "Graphs": "graphs",
+      "Dynamic Programming": "dp"
     Arrays: "arrays",
     Strings: "strings",
     "Linked List": "linkedlist",
@@ -1360,6 +1337,12 @@ function getTopicProgress(topicName) {
   const category = categoryMap[topicName];
   if (!category) return { completed: 0, total: 0, percentage: 0 };
 
+  const topicProblems = practiceProblems.filter(p => p.category === category);
+  const total = topicProblems.length;
+  if (total === 0) return { completed: 0, total: 0, percentage: 0 };
+
+  const completed = topicProblems.filter(p =>
+      userProgress.completedProblems.includes(p.id)
   const topicProblems = practiceProblems.filter((p) => p.category === category);
   const total = topicProblems.length;
   if (total === 0) return { completed: 0, total: 0, percentage: 0 };
@@ -1387,6 +1370,11 @@ function initTopicOfTheDay() {
   const topic = getDailyTopic();
   if (!topic) return;
 
+  document.getElementById('totdIcon').textContent = topic.icon;
+  document.getElementById('totdTitle').textContent = topic.name;
+  document.getElementById('totdDesc').textContent = topic.description;
+
+  const diffEl = document.getElementById('totdDifficulty');
   document.getElementById("totdIcon").textContent = topic.icon;
   document.getElementById("totdTitle").textContent = topic.name;
   document.getElementById("totdDesc").textContent = topic.description;
@@ -1396,6 +1384,11 @@ function initTopicOfTheDay() {
   diffEl.className = `totd-difficulty difficulty-badge ${getDifficultyClass(topic.difficulty)}`;
 
   const progress = getTopicProgress(topic.name);
+  document.getElementById('totdProblems').textContent =
+      `${progress.completed}/${progress.total} solved`;
+
+  document.getElementById('totdBtn').addEventListener('click', () => {
+      openTopicModal(topic);
   document.getElementById("totdProblems").textContent =
     `${progress.completed}/${progress.total} solved`;
 
@@ -1428,6 +1421,7 @@ function initTopicsSection() {
             </div>
             <div class="mastery-bar" role="progressbar" aria-valuenow="${progress.percentage}" aria-valuemin="0" aria-valuemax="100" aria-label="${topic.name} mastery progress">
                 <div class="mastery-fill" style="width: ${progress.percentage}%"></div>
+            </div>
             </div>
             </div>
             <div class="mastery-bar" role="progressbar" aria-valuenow="${progress.percentage}" aria-valuemin="0" aria-valuemax="100" aria-label="${topic.name} mastery progress">
@@ -1875,6 +1869,7 @@ function showQuizResults(score, total, percentage, xpEarned, completionTime) {
 
   resultEl.classList.remove("hidden");
 }
+
 // ===== PRACTICE SECTION =====
 function initPracticeSection() {
   const problemsGrid = document.querySelector(".problems-grid");
@@ -1992,11 +1987,6 @@ function renderProblems(filter = "all", searchQuery = "") {
 data-id="${problem.id}">
         <i class="fas fa-heart"></i>
     </button>
-    <button class="notes-btn ${
-      userProgress.problemNotes[problem.id] ? "has-notes" : ""
-    }" data-id="${problem.id}">
-  <i class="fas fa-sticky-note"></i>
-</button>
 
                <button class="notes-btn ${
                  userProgress.problemNotes[problem.id] ? "active" : ""
@@ -2643,7 +2633,7 @@ function initChatbot() {
     if (!message) return;
 
     // Add user message
-    addChatMessage(message, "user");
+    addChatMessage(`<p>${message}</p>`, "user");
 
     // Store previous question
     lastQuestion = message;
@@ -2699,13 +2689,7 @@ function addChatMessage(message, sender) {
   const messagesContainer = document.getElementById("chatbotMessages");
   const messageEl = document.createElement("div");
   messageEl.className = `message ${sender}`;
-  // Safe rendering
-  if (sender === "user") {
-    messageEl.textContent = message;
-  } else {
-    messageEl.innerHTML = message;
-  }
-
+  messageEl.innerHTML = message;
   messagesContainer.appendChild(messageEl);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
@@ -2725,10 +2709,10 @@ function getBotResponse(question) {
   return `
     <div class="assistant-response">
       <h4>🧠 Problem Understanding</h4>
-      <p>${escapeHtml(question)}</p>
+      <p>${question}</p>
 
       <h4>⚡ Approach</h4>
-      <p>${escapeHtml(response)}</p>
+      <p>${response}</p>
 
       <h4>💻 Code Solution</h4>
       <pre><code>
@@ -2930,8 +2914,6 @@ function loadUserData() {
       xp: 0,
       level: 1,
       streak: 0,
-      favoriteProblems: [],
-      problemNotes: {},
       badges: [],
       lastActive: null,
       quizScores: {},
