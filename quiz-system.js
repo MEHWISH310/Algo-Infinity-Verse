@@ -511,13 +511,8 @@ class QuizUI {
         this.mistakePanel.classList.remove('visible');
     }
 
-    /**
-     * Renders the results view including a "Weak Areas" section.
-     * @param {Object} scoreData - { score, total, percentage, sessionMistakeTags }
-     * @param {Array} allTimeMistakes - sorted [{ tag, count }] from localStorage
-     */
-    renderResults(scoreData, allTimeMistakes) {
-        this.quizProgressBar.style.width = '100%';
+    renderResults(scoreData, isSaving = false) {
+        this.quizProgressBar.style.width = '100%'; // max out progress
         this.finalScoreDisplay.textContent = `${scoreData.percentage}%`;
 
         if (scoreData.percentage >= 80) {
@@ -531,35 +526,10 @@ class QuizUI {
             this.finalScoreDisplay.style.color = 'var(--quiz-danger)';
         }
 
-        // Render weak areas from this session
-        const sessionTags = scoreData.sessionMistakeTags;
-        if (sessionTags && sessionTags.length > 0) {
-            // De-dupe and count session tags
-            const tagCounts = sessionTags.reduce((acc, tag) => {
-                acc[tag] = (acc[tag] || 0) + 1;
-                return acc;
-            }, {});
-
-            this.weakAreasList.innerHTML = Object.entries(tagCounts)
-                .sort((a, b) => b[1] - a[1])
-                .map(([tag, count]) => `
-                    <li class="weak-area-item">
-                        <span class="weak-tag">${this._formatTag(tag)}</span>
-                        <span class="weak-count">${count} mistake${count > 1 ? 's' : ''}</span>
-                    </li>
-                `).join('');
-            this.weakAreasSection.classList.remove('hidden');
-        } else {
-            this.weakAreasSection.classList.add('hidden');
+        // Show saving status
+        if (isSaving) {
+            this.resultsMessage.textContent += ' Saving results...';
         }
-    }
-
-    /**
-     * Converts a kebab-case tag like "hash-basics" to "Hash Basics".
-     */
-    _formatTag(tag) {
-        if (!tag) return '';
-        return tag.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
 }
 
@@ -619,11 +589,60 @@ class QuizController {
         }
     }
 
-    handleFinishQuiz() {
+    async handleFinishQuiz() {
         const scoreData = this.state.getFinalScore();
-        const allTimeMistakes = this.state.getMistakePersistence();
-        this.ui.renderResults(scoreData, allTimeMistakes);
+        this.ui.renderResults(scoreData, true);
         this.ui.switchView('results');
+
+        // Save quiz result to Firestore if user is authenticated
+        await this.saveQuizResult(scoreData);
+        
+        // Update results message after save attempt
+        this.ui.renderResults(scoreData, false);
+    }
+
+    async saveQuizResult(scoreData) {
+        try {
+            // Check if user is authenticated via session
+            const sessionResp = await fetch('/api/session', { credentials: 'include' });
+            const sessionData = await sessionResp.json();
+
+            if (!sessionData.authenticated || !sessionData.user) {
+                // User not logged in — skip saving
+                console.log('Quiz result not saved: user not authenticated.');
+                return;
+            }
+
+            const category = QuizData.categories.find(c => c.id === this.state.activeCategoryId);
+            if (!category) return;
+
+            const payload = {
+                quizId: category.id,
+                quizTitle: category.title,
+                score: scoreData.score,
+                totalQuestions: scoreData.total,
+                correctAnswers: scoreData.score,
+                percentage: scoreData.percentage,
+                topic: category.title,
+            };
+
+            const response = await fetch('/api/quiz-results', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                console.warn('Failed to save quiz result:', err.error || response.statusText);
+            } else {
+                console.log('Quiz result saved successfully.');
+            }
+        } catch (error) {
+            // Network failure — log but don't block UI
+            console.warn('Quiz result save failed (network):', error.message);
+        }
     }
 
     handleRestart() {
