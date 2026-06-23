@@ -27,8 +27,7 @@ function initFirebase() {
     } catch (e) {
       console.error("Firebase init error:", e);
     }
-  }
-  if (getApps().length === 0 && projectId) {
+  } else if (projectId) {
     initializeApp({ projectId });
   }
 }
@@ -86,12 +85,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing idToken" });
     }
 
-    let decoded;
-    try {
-      decoded = await getAuth().verifyIdToken(idToken);
-    } catch (verifyError) {
-      return res.status(401).json({ error: "Invalid token" });
-    }
+let decoded;
+      try {
+        decoded = await getAuth().verifyIdToken(idToken);
+      } catch (verifyError) {
+        console.error("Token verification failed:", verifyError.message);
+        return res.status(401).json({ error: "Invalid token" });
+      }
 
     const { uid, email, name, picture } = decoded;
     const cleanEmail = (email || "").toLowerCase().trim();
