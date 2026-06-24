@@ -610,10 +610,8 @@ async function handleApi(req, res, pathname) {
   }
 
   if (pathname === "/api/auth/google" && req.method === "POST") {
-    // Check if Firebase Admin is configured - required for Google OAuth
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    if (!projectId) {
-      return sendJson(res, 500, { error: "Firebase is not configured for authentication. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY environment variables." });
+    if (!process.env.FIREBASE_API_KEY || !process.env.FIREBASE_PROJECT_ID) {
+      return sendJson(res, 500, { error: "Firebase is not configured for authentication. Set FIREBASE_API_KEY and FIREBASE_PROJECT_ID environment variables." });
     }
 
     try {
@@ -623,28 +621,20 @@ async function handleApi(req, res, pathname) {
         return sendJson(res, 400, { error: "Missing idToken" });
       }
 
-      const { getApps, initializeApp, cert } = await import("firebase-admin/app");
-      const { getAuth } = await import("firebase-admin/auth");
-
-      if (getApps().length === 0) {
-        const projectId = process.env.FIREBASE_PROJECT_ID;
-        const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-        const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-        if (!projectId) {
-          return sendJson(res, 500, { error: "Firebase is not configured for authentication." });
-        }
-        if (clientEmail && privateKey) {
-          initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
-        } else {
-          return sendJson(res, 500, {
-            error: "Firebase Admin requires FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY environment variables to verify ID tokens.",
-          });
-        }
-      }
-
       let decoded;
       try {
-        decoded = await getAuth().verifyIdToken(idToken);
+        const tokenResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+        if (!tokenResponse.ok) throw new Error("Token verification failed");
+        const tokenData = await tokenResponse.json();
+        if (tokenData.aud !== process.env.FIREBASE_API_KEY) throw new Error("Invalid audience");
+        if (tokenData.iss !== `https://securetoken.google.com/${process.env.FIREBASE_PROJECT_ID}`) throw new Error("Invalid issuer");
+        decoded = {
+          uid: tokenData.sub,
+          email: tokenData.email,
+          name: tokenData.name,
+          picture: tokenData.picture,
+          emailVerified: tokenData.email_verified === "true",
+        };
       } catch (verifyError) {
         console.error("Token verification failed:", verifyError.message);
         return sendJson(res, 401, { error: "Invalid token" });
@@ -655,7 +645,6 @@ async function handleApi(req, res, pathname) {
       const displayName = name || cleanEmail.split("@")[0] || "Learner";
 
       let user = null;
-      // Firestore is required for Google auth - file storage doesn't work in serverless
       if (!useFirestore) {
         return sendJson(res, 503, { error: "User accounts require Firebase Firestore in serverless mode. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY environment variables." });
       }
