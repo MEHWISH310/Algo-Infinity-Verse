@@ -19,9 +19,11 @@ import { handleReportRequest } from "./backend/reports/reportGenerator.js";
 import { getUserBenchmark } from "./backend/benchmarking/percentileService.js";
 import { Server as SocketIOServer } from "socket.io";
 import { 
-  SESSION_MAX_AGE_SECONDS, getClientIdentifier, isSignupRateLimited, 
-  recordSignupAttempt, normalizeAuthDelay, createSessionToken, 
-  verifySessionToken, hashPassword, passwordMatches, validateSignup 
+  ACCESS_TOKEN_MAX_AGE_SECONDS, getClientIdentifier, isSignupRateLimited, 
+  recordSignupAttempt, normalizeAuthDelay, createAccessToken, 
+  verifyAccessToken, hashPassword, passwordMatches, validateSignup,
+  createRefreshToken, verifyRefreshToken, revokeTokenFamily,
+  activeRefreshFamilies
 } from "./backend/services/auth.service.js";
 import { applySM2 } from "./backend/services/memory.service.js";
 import { sendVerificationEmail } from "./backend/services/email.service.js";
@@ -44,6 +46,7 @@ const USERS_FILE = path.join(DATA_DIR, "users.json");
 const MEMORY_FILE = path.join(DATA_DIR, "memory.json");
 const TEAM_PROFILES_FILE = path.join(DATA_DIR, "team_profiles.json");
 const AUDITS_FILE = path.join(DATA_DIR, "audits_history.json");
+const SESSION_COOKIE = "aiv_session";
 const ACCESS_COOKIE = "aiv_access";
 const REFRESH_COOKIE = "aiv_refresh";
 
@@ -114,6 +117,11 @@ function parseCookies(cookieHeader = "") {
   }, {});
 }
 
+function getRefreshToken(req) {
+  const cookies = parseCookies(req.headers.cookie || "");
+  return cookies[REFRESH_COOKIE] || null;
+}
+
 function authCookies(token, req) {
   const secure = req.headers["x-forwarded-proto"] === "https";
   return [
@@ -121,7 +129,7 @@ function authCookies(token, req) {
     "HttpOnly",
     "SameSite=Lax",
     "Path=/",
-    `Max-Age=${SESSION_MAX_AGE_SECONDS}`,
+    `Max-Age=${ACCESS_TOKEN_MAX_AGE_SECONDS}`,
     secure ? "Secure" : "",
   ]
     .filter(Boolean)
@@ -315,7 +323,7 @@ function redirect(res, location, headers = {}) {
 
 function getSession(req) {
   const cookies = parseCookies(req.headers.cookie || "");
-  return verifySessionToken(cookies[SESSION_COOKIE]);
+  return verifyAccessToken(cookies[SESSION_COOKIE]);
 }
 
 function normalizePathname(pathname) {
@@ -810,7 +818,7 @@ async function handleApi(req, res, pathname) {
       if (index !== -1) { users[index] = user; await writeUsers(users); }
     }
 
-    const token = createSessionToken(user);
+    const token = createAccessToken(user);
     return sendJson(
       res, 200,
       { user: { id: user.id, name: user.name, email: user.email } },
@@ -913,7 +921,7 @@ async function handleApi(req, res, pathname) {
         user = await createUser(newUser);
       }
 
-      const token = createSessionToken(user);
+      const token = createAccessToken(user);
       const cookie = authCookies(token, req);
 
       return sendJson(res, 200, {
@@ -1773,7 +1781,7 @@ if (pathname === "/api/forgot-password" && req.method === "POST") {
     users[idx].verifyTokenExpiry = null;
     await writeUsers(users);
 
-    const sessionToken = createSessionToken(users[idx]);
+    const sessionToken = createAccessToken(users[idx]);
     res.setHeader("Set-Cookie", authCookies(sessionToken, req));
     return sendJson(res, 200, { ok: true });
   }

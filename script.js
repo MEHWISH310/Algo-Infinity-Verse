@@ -303,7 +303,7 @@ const dsaTopics = [
 const practiceProblems = [
   { id: 1, title: "Two Sum", difficulty: "easy", tags: ["Arrays", "Hash Table"], acceptance: "48.2%", category: "arrays", description: "Given an array of integers nums and an integer target, return indices of the two numbers that add up to target.", constraints: ["2 ≤ nums.length ≤ 10⁴", "-10⁹ ≤ nums[i] ≤ 10⁹", "Only one valid answer exists"], followUp: "Can you solve it in O(n) time complexity?", functionName: "twoSum", params: ["nums", "target"], testCases: [{ input: [[2,7,11,15], 9], expected: [0,1] }, { input: [[3,2,4], 6], expected: [1,2] }, { input: [[3,3], 6], expected: [0,1] }] },
   { id: 2, title: "Valid Parentheses", difficulty: "easy", tags: ["Strings", "Stack"], acceptance: "40.2%", category: "strings", description: "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.", constraints: ["1 ≤ s.length ≤ 10⁴", "s consists of parentheses only '()[]{}'"], followUp: "Can you solve it in O(n) time and O(n) space?", functionName: "isValid", params: ["brackets"], guide: "brackets: string of '()', '{}', '[]' characters\nreturns: true if every opening bracket has a matching closing bracket in the correct order, false otherwise", testCases: [{ input: ["()"], expected: true }, { input: ["()[]{}"], expected: true }, { input: ["(]"], expected: false }, { input: ["([)]"], expected: false }, { input: ["{[]}"], expected: true }] },
-  { id: 3, title: "Merge Two Sorted Lists", difficulty: "easy", tags: ["Linked List", "Recursion"], acceptance: "58.5%", category: "linkedlist", description: "Given two sorted arrays list1 and list2, merge them into one sorted array.", constraints: ["0 ≤ list1.length, list2.length ≤ 50", "-100 ≤ list1[i], list2[i] ≤ 100"], followUp: "Can you solve it iteratively using O(1) extra space, and also recursively?", functionName: "mergeLists", testCases: [{ input: [[1,2,4], [1,3,4]], expected: [1,1,2,3,4,4] }, { input: [[], []], expected: [] }, { input: [[], [0]], expected: [0] }] },
+  { id: 3, title: "Merge Two Sorted Lists", difficulty: "easy", tags: ["Linked List", "Recursion"], acceptance: "58.5%", category: "linkedlist", description: "Given two sorted arrays list1 and list2, merge them into one sorted array.", constraints: ["0 ≤ list1.length, list2.length ≤ 50", "-100 ≤ list1[i], list2[i] ≤ 100"], followUp: "Can you solve it iteratively using O(1) extra space, and also recursively?", functionName: "mergeLists", params: ["list1", "list2"], guide: "list1: first sorted array of integers\nlist2: second sorted array of integers\nreturns: a new sorted array containing all elements from both lists in ascending order", testCases: [{ input: [[1,2,4], [1,3,4]], expected: [1,1,2,3,4,4] }, { input: [[], []], expected: [] }, { input: [[], [0]], expected: [0] }] },
   { id: 4, title: "Maximum Subarray", difficulty: "medium", tags: ["Arrays", "Divide & Conquer"], acceptance: "46.2%", category: "arrays", description: "Given an integer array nums, find the contiguous subarray (containing at least one number) which has the largest sum.", constraints: ["1 ≤ nums.length ≤ 10⁵", "-10⁴ ≤ nums[i] ≤ 10⁴"], followUp: "Can you solve it in O(n) time using Kadane's Algorithm?", functionName: "maxSubArray", testCases: [{ input: [[-2,1,-3,4,-1,2,1,-5,4]], expected: 6 }, { input: [[1]], expected: 1 }, { input: [[5,4,-1,7,8]], expected: 23 }, { input: [[-1]], expected: -1 }] },
   { id: 5, title: "LRU Cache", difficulty: "medium", tags: ["Design", "Hash Table"], acceptance: "37.5%", category: "arrays", description: "Design a data structure that follows the constraints of a Least Recently Used (LRU) cache.", constraints: ["1 ≤ capacity ≤ 3000", "0 ≤ key, value ≤ 10⁴", "At most 2 × 10⁵ calls"], followUp: "Can you implement both get and put in O(1) time complexity?" },
   { id: 6, title: "Clone Graph", difficulty: "medium", tags: ["Graphs", "DFS", "BFS"], acceptance: "43.2%", category: "graphs", description: "Given a reference to a node in a connected undirected graph, return a deep copy (clone) of the graph.", constraints: ["The number of nodes in the graph is in the range [0, 100]", "1 ≤ Node.val ≤ 100", "Node.val is unique for each node"], followUp: "Can you solve it using both BFS and DFS approaches?" },
@@ -2270,7 +2270,11 @@ function getDefaultCode(lang, problem) {
     ? params.map((p, i) => {
         const t = paramTypes[i] || 'auto';
         if (lang === 'cpp') return t + ' ' + p;
-        if (lang === 'c') return t + ' ' + p;
+        if (lang === 'c') {
+          const origJt = tc?.input ? j2t(tc.input[i]) : null;
+          const isArray = origJt && origJt.endsWith('[]');
+          return t + ' ' + p + (isArray ? ', int ' + p + 'Size' : '');
+        }
         if (lang === 'java') return t + ' ' + p;
         if (lang === 'swift') return '_ ' + p + ': ' + t;
         return p;
@@ -2296,7 +2300,7 @@ function getDefaultCode(lang, problem) {
 }
 
 function generateExamples(problem) {
-  const examples = { 1: `<strong>Example 1:</strong><br>Input: nums = [2,7,11,15], target = 9<br>Output: [0,1]<br><br><strong>Follow-up:</strong> Can you solve it in O(n) using a Hash Map?`, 2: `<strong>Example 1:</strong><br>Input: s = "()"<br>Output: true<br><br><strong>Follow-up:</strong> Can you solve it in O(n) using a Stack?`, 3: `<strong>Example 1:</strong><br>Input: l1 = [1,2,4], l2 = [1,3,4]<br>Output: [1,1,2,3,4,4]<br><br><strong>Follow-up:</strong> Can you solve it both iteratively and recursively?`, 4: `<strong>Example 1:</strong><br>Input: nums = [-2,1,-3,4,-1,2,1,-5,4]<br>Output: 6<br><br><strong>Follow-up:</strong> Can you solve it using Kadane's Algorithm in O(n)?` };
+  const examples = { 1: `<strong>Example 1:</strong><br>Input: nums = [2,7,11,15], target = 9<br>Output: [0,1]<br><br><strong>Follow-up:</strong> Can you solve it in O(n) using a Hash Map?`, 2: `<strong>Example 1:</strong><br>Input: s = "()"<br>Output: true<br><br><strong>Follow-up:</strong> Can you solve it in O(n) using a Stack?`, 3: `<strong>Example 1:</strong><br>Input: list1 = [1,2,4], list2 = [1,3,4]<br>Output: [1,1,2,3,4,4]<br><br><strong>Follow-up:</strong> Can you solve it both iteratively and recursively?`, 4: `<strong>Example 1:</strong><br>Input: nums = [-2,1,-3,4,-1,2,1,-5,4]<br>Output: 6<br><br><strong>Follow-up:</strong> Can you solve it using Kadane's Algorithm in O(n)?` };
   return examples[problem.id] || "<strong>Example:</strong><br>Solve this problem";
 }
 
@@ -2499,7 +2503,7 @@ function genCHarness(code, fn, tcs) {
       if (j > 0) callArgs += ', ';
       if (inTypes[j] === 'int[]') {
         const arr = tcs[i].input[j];
-        callArgs += '(int[]){' + arr.map(x => x).join(',') + '}';
+        callArgs += '(int[]){' + arr.map(x => x).join(',') + '}, ' + arr.length;
       } else callArgs += valToLit(tcs[i].input[j], inTypes[j]);
     }
     if (outType === 'int[]') {
@@ -2533,6 +2537,15 @@ function genSwiftHarness(code, fn, tcs) {
   s += code + '\n\n';
   if (outType === 'int[]') {
     s += 'func __j(_ v: [Int]) -> String {\n  if v.isEmpty { return "[]" }\n  return "[" + v.map(String.init).joined(separator: ",") + "]"\n}\n';
+  } else if (outType === 'int') {
+    s += 'func __j(_ v: Int) -> String { return String(v) }\n';
+  } else if (outType === 'bool') {
+    s += 'func __j(_ v: Bool) -> String { return v ? "true" : "false" }\n';
+  } else if (outType === 'string') {
+    s += 'func __j(_ v: String) -> String {\n' +
+         '  let data = try! JSONEncoder().encode(v)\n' +
+         '  return String(data: data, encoding: .utf8)!\n' +
+         '}\n';
   }
   s += 'var __res = "["\n';
   for (let i = 0; i < tcs.length; i++) {
