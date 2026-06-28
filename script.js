@@ -1881,99 +1881,70 @@ window.flipMemoryCard = flipMemoryCard;
 
 // ===== PROFILE =====
 function initProfile() {
+  if (!userProgress) return;
 
-    var profileName = document.getElementById("profileName");
-    if (profileName) {
-        profileName.textContent = userProgress.name;
-    }
-    
-    // Set joined date
-    var joinDate = document.getElementById("joinDate");
-    if (joinDate) {
-        let joinDateObj;
-        if (userProgress.joinDate) {
-            joinDateObj = new Date(userProgress.joinDate);
-        } else {
-            joinDateObj = new Date();
-            userProgress.joinDate = joinDateObj.toISOString();
-            saveUserData();
-        }
-        joinDate.textContent = joinDateObj.toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric"
-        });
-    }
-    
-    // Set current date in dashboard
-    var currentDateElement = document.getElementById("current-date");
-    if (currentDateElement) {
-        var today = new Date();
-        currentDateElement.textContent = "Today: " + today.toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric"
-        });
-    }
-    
-    // Set current date in dashboard card
-    var dashboardCurrentDateElement = document.getElementById("dashboard-current-date");
-    if (dashboardCurrentDateElement) {
-        var today = new Date();
-        dashboardCurrentDateElement.textContent = "Today: " + today.toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric"
-        });
-    }
-    
-    var avatarIcon = document.querySelector('.avatar-icon');
-    if (avatarIcon) {
-        avatarIcon.textContent = userProgress.avatar || '🚀';
-    }
-    updateProfile();
+  // Set profile names
+  const profileName = document.getElementById("profileName");
+  const profileDashboardName = document.getElementById("profileDashboardName");
 
-  var profileName = document.getElementById("profileName") || document.getElementById("profileDashboardName");
-  if (profileName) {
-    profileName.textContent = userProgress.name;
-  }
-  
-  // Set join date in userProgress if missing
+  if (profileName) profileName.textContent = userProgress.name;
+  if (profileDashboardName)
+    profileDashboardName.textContent = userProgress.name;
+
+  // Set join date if missing
   if (!userProgress.joinDate) {
     userProgress.joinDate = new Date().toISOString();
     saveUserData();
   }
 
-  var joinDate = document.getElementById("joinDate");
-  var joinDateSection = document.getElementById("joinDateSection") || document.getElementById("joinDateDashboard");
-  if (joinDate || joinDateSection) {
-    var dateVal = new Date(userProgress.joinDate);
-    var formattedDate = isNaN(dateVal.getTime()) ? userProgress.joinDate : dateVal.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-    if (joinDate) joinDate.textContent = formattedDate;
-    if (joinDateSection) joinDateSection.textContent = formattedDate;
-  }
-  var currentDate = document.getElementById("current-date");
+  const joinDateObj = new Date(userProgress.joinDate);
+  const formattedJoinDate = isNaN(joinDateObj.getTime())
+    ? userProgress.joinDate
+    : joinDateObj.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+
+  const joinDate = document.getElementById("joinDate");
+  const joinDateSection =
+    document.getElementById("joinDateSection") ||
+    document.getElementById("joinDateDashboard");
+
+  if (joinDate) joinDate.textContent = formattedJoinDate;
+  if (joinDateSection) joinDateSection.textContent = formattedJoinDate;
+
+  // Current date
+  const today = new Date();
+  const formattedToday = today.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const currentDate = document.getElementById("current-date");
   if (currentDate) {
-    currentDate.textContent = new Date().toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
+    currentDate.textContent = "Today: " + formattedToday;
   }
-  var avatarIcon = document.querySelector(".avatar-icon");
-  if (avatarIcon) {
-    avatarIcon.textContent = userProgress.avatar || "🚀";
+
+  const dashboardCurrentDate = document.getElementById(
+    "dashboard-current-date"
+  );
+  if (dashboardCurrentDate) {
+    dashboardCurrentDate.textContent = "Today: " + formattedToday;
   }
+
+  // Update all avatars
+  document.querySelectorAll(".avatar-icon").forEach((avatar) => {
+    avatar.textContent = userProgress.avatar || "🚀";
+  });
+
   updateProfile();
-
 }
-
 function updateProfile() {
-  var levelNames = [
+  if (!userProgress) return;
+
+  const levelNames = [
     "Beginner",
     "Novice",
     "Intermediate",
@@ -1983,93 +1954,99 @@ function updateProfile() {
     "Grandmaster",
     "Legend",
   ];
-  var profileLevel = document.getElementById("profileLevel");
-  if (profileLevel) {
-    profileLevel.textContent =
-      "Level " +
-      userProgress.level +
-      " - " +
-      levelNames[userProgress.level - 1];
-  }
 
-  // Profile Section Level
-  var profileLevelSection = document.getElementById("profileLevelSection");
-  if (profileLevelSection) {
-    profileLevelSection.textContent =
-      "Level " +
-      userProgress.level +
-      " - " +
-      levelNames[userProgress.level - 1];
-  }
+  const levelName =
+    levelNames[userProgress.level - 1] || "Legend";
 
-  var profileXP = document.getElementById("profileTotalXP");
-  if (profileXP) profileXP.textContent = userProgress.xp.toLocaleString();
+  const badges = [
+    userProgress.completedProblems.length >= 1,
+    userProgress.streak >= 7,
+    userProgress.xp >= 5000,
+    userProgress.completedProblems.length >= 50,
+    userProgress.completedProblems.length >= 100,
+    userProgress.completedProblems.length >= 25 &&
+      userProgress.xp >= 2500,
+  ].filter(Boolean).length;
 
-  // Profile Section XP
-  var profileXPSection = document.getElementById("profileTotalXPSection");
-  if (profileXPSection)
-    profileXPSection.textContent = userProgress.xp.toLocaleString();
-
-  var profileProblems = document.getElementById("profileProblems");
-  if (profileProblems)
-    profileProblems.textContent = userProgress.completedProblems.length;
-
-  // Profile Section Problems
-  var profileProblemsSection = document.getElementById(
-    "profileProblemsSection",
-  );
-  if (profileProblemsSection)
-    profileProblemsSection.textContent = userProgress.completedProblems.length;
-
-  var profileStreak = document.getElementById("profileStreak");
-  if (profileStreak) profileStreak.textContent = userProgress.streak;
-
-  var profileFreezes = document.getElementById("profileFreezes");
-  if (profileFreezes) profileFreezes.textContent = userProgress.freezes || 0;
-
-  var profileSectionStreak = document.getElementById("profileSectionStreak");
-  if (profileSectionStreak)
-    profileSectionStreak.textContent = userProgress.streak;
-    
-  var profileSectionFreezes = document.getElementById("profileSectionFreezes");
-  if (profileSectionFreezes)
-    profileSectionFreezes.textContent = userProgress.freezes || 0;
-
-  var profileBadges = document.getElementById("profileBadges");
-
-  if (profileBadges) {
-    var badges = [
-      userProgress.completedProblems.length >= 1,
-      userProgress.streak >= 7,
-      userProgress.xp >= 5000,
-      userProgress.completedProblems.length >= 50,
-      userProgress.completedProblems.length >= 100,
-      userProgress.completedProblems.length >= 25 && userProgress.xp >= 2500,
-    ].filter(Boolean).length;
-
-    profileBadges.textContent = badges;
-
-    // Profile Section Badges
-    var profileBadgesSection = document.getElementById("profileBadgesSection");
-
-    if (profileBadgesSection) {
-      profileBadgesSection.textContent = badges;
+  // Level
+  [
+    "profileLevel",
+    "profileLevelSection",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = `Level ${userProgress.level} - ${levelName}`;
     }
-  }
+  });
 
-  // Update profile name in dashboard
-  var dashboardProfileName = document.getElementById("profileName") || document.getElementById("profileDashboardName");
-  if (dashboardProfileName) {
-    dashboardProfileName.textContent = userProgress.name;
-  }
+  // XP
+  [
+    "profileTotalXP",
+    "profileTotalXPSection",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = userProgress.xp.toLocaleString();
+    }
+  });
 
-  // Update profile name in profile section
-  var profileSectionName = document.getElementById("profileSectionName");
-  if (profileSectionName) {
-    profileSectionName.textContent = userProgress.name;
-  }
+  // Problems
+  [
+    "profileProblems",
+    "profileProblemsSection",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = userProgress.completedProblems.length;
+    }
+  });
 
-  // Update avatar
+  // Streak
+  [
+    "profileStreak",
+    "profileSectionStreak",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = userProgress.streak;
+    }
+  });
+
+  // Freezes
+  [
+    "profileFreezes",
+    "profileSectionFreezes",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = userProgress.freezes || 0;
+    }
+  });
+
+  // Badges
+  [
+    "profileBadges",
+    "profileBadgesSection",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = badges;
+    }
+  });
+
+  // Names
+  [
+    "profileName",
+    "profileDashboardName",
+    "profileSectionName",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = userProgress.name;
+    }
+  });
+
+  // Avatars
   document.querySelectorAll(".avatar-icon").forEach((el) => {
     el.textContent = userProgress.avatar || "🚀";
   });
@@ -2078,43 +2055,42 @@ function updateProfile() {
 }
 
 function updateLevelProgress() {
-  var levels = [0, 1000, 2500, 5000, 10000, 20000, 50000, 100000];
+  const levels = [0, 1000, 2500, 5000, 10000, 20000, 50000, 100000];
 
-  var currentLevel = userProgress.level;
+  const currentLevel = Math.max(1, userProgress.level);
 
-  var currentLevelXP = levels[Math.max(0, currentLevel - 1)];
+  const currentXP = levels[currentLevel - 1] || 0;
+  const nextXP = levels[currentLevel] || 100000;
 
-  var nextLevelXP = levels[currentLevel] || 100000;
+  const denominator = nextXP - currentXP;
 
-  var xpProgress =
-    ((userProgress.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+  const progress =
+    denominator > 0
+      ? ((userProgress.xp - currentXP) / denominator) * 100
+      : 100;
 
-  var progressPercent = Math.min(Math.max(xpProgress, 0), 100);
+  const percent = Math.min(Math.max(progress, 0), 100);
 
-  // Dashboard Progress Bar
-  var progressBar = document.getElementById("profileProgressBar");
+  [
+    "profileProgressBar",
+    "profileProgressBarSection",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.width = percent + "%";
+    }
+  });
 
-  var progressLabel = document.getElementById("profileLevelProgress");
-
-  if (progressBar) progressBar.style.width = progressPercent + "%";
-
-  if (progressLabel)
-    progressLabel.textContent = Math.round(progressPercent) + "%";
-
-  // Profile Section Progress Bar
-  var progressBarSection = document.getElementById("profileProgressBarSection");
-
-  var progressLabelSection = document.getElementById(
+  [
+    "profileLevelProgress",
     "profileLevelProgressSection",
-  );
-
-  if (progressBarSection)
-    progressBarSection.style.width = progressPercent + "%";
-
-  if (progressLabelSection)
-    progressLabelSection.textContent = Math.round(progressPercent) + "%";
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = Math.round(percent) + "%";
+    }
+  });
 }
-
 // ===== DASHBOARD =====
 function initDashboard() {
   updateDashboard();
